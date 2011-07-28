@@ -1,6 +1,6 @@
 # sprite-packer
 
-Texture Packer for in Python, for use with cocos2d.
+Texture Packer for cocos2d, written in Python.
 
 ## Features
 
@@ -20,11 +20,11 @@ The sprite is definied in a config file. To get started, create an empty config 
 
     sprite-packer -n test.cfg
 
-Now, edit this, save it and run
+Now, edit this appropiately, save it and run
 
     sprite-packer test.cfg
 
-Your sprite and plist will be generated.
+Your sprite and plist will now be generated.
 
 ## Requirements
 
