@@ -37,8 +37,9 @@ Your sprite and plist will be generated.
  * Click 'Add Build Phase'.
  * Move this up above 'Compile Sources' and below 'Target Dependencies'.
  * You can let the shell be '/bin/sh'.
- * Enter the following:
+ * Finally, enter the code here below.
 
+Code:
 
     exec sprite-packer path/to/config.cfg
 
