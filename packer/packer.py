@@ -5,6 +5,7 @@ import ConfigParser
 from os.path import basename, dirname, join
 import fnmatch
 from PIL import Image
+import plistlib
 
 # Project
 from sprite import Sprite
@@ -16,6 +17,15 @@ import simple
 
 ERROR = 0
 MESSAGE = 1
+
+def plist_encode(value):
+	if isinstance(value, tuple) or isinstance(value, tuple):
+		# Notice, a double {{ escapes it, so this is essentially "{%s}" using old syntax
+		return "{{{0}}}".format(",".join(["{0}".format(plist_encode(x)) for x in value]))
+	elif isinstance(value, bool):
+		return ['YES', 'NO'][int(value)]
+	else:
+		return str(value)
 
 class Packer(object):
 	def __init__(self, config_file_path):
@@ -42,38 +52,70 @@ class Packer(object):
 
 
 		cat = "sprite-packer"
+
+		items = []	
+
 		try:
-			self.settings['input_path'] = parser.get(cat, "input")
-			self.settings['output_path'] = parser.get(cat, "output")
-			width = int(parser.get(cat, "width"))
-			height = int(parser.get(cat, "height"))	
-			if width <= 0 or height <= 0:
-				self.error = "Invalid size ({0}, {1})".format(width, height)
-			else:
-				self.settings['size'] = (width, height)	
-
-			padding = int(parser.get(cat, "padding"))
-			if padding < 0:
-				self.error = "Invalid padding {0}".format(padding)
-			else:
-				self.settings['padding'] = padding
-
-			self.settings['algorithm'] = parser.get(cat, "algorithm")
-			if self.settings['algorithm'] not in ALGORITHMS:
-				self.error = "Could not find algorithm '{0}'".format(self.settings['algorithm'])
-				return
-
+			items = dict(parser.items(cat))
 		except ConfigParser.NoSectionError, e:
 			self.error = e 
 			return False
-		except ConfigParser.NoOptionError, e:
-			self.error = e 
-			return False
-		except Exception, e:
-			self.error = e	
-			return False
+
+		required = ['input', 'output-sprite', 'output-plist', 'width', 'height', 'padding', 'algorithm']
+
+		print items
+		for r in required:
+			if r not in items:
+				self.error = "Options '{0}' required".format(r)
+				return False
+
+		self.settings['input_path'] = items["input"]
+		self.settings['output_path'] = items["output-sprite"]
+		self.settings['plist_path'] = items["output-plist"]
+		width = int(items["width"])
+		height = int(items["height"])	
+		if width <= 0 or height <= 0:
+			self.error = "Invalid size ({0}, {1})".format(width, height)
+		else:
+			self.settings['size'] = (width, height)	
+
+		padding = int(items["padding"])
+		if padding < 0:
+			self.error = "Invalid padding {0}".format(padding)
+		else:
+			self.settings['padding'] = padding
+
+		self.settings['algorithm'] = items["algorithm"]
+		if self.settings['algorithm'] not in ALGORITHMS:
+			self.error = "Could not find algorithm '{0}'".format(self.settings['algorithm'])
+			return
+
+		if 'scale' in items:
+			self.settings['scale'] = float(items['scale'])
+		else:
+			self.settings['scale'] = 1.0
+
+		if 'source-pixels-to-points' in items:
+			self.settings['source-pixels-to-points'] = float(items['source-pixels-to-points'])
+		else:
+			self.settings['source-pixels-to-points'] = 1.0
 
 		return True
+
+	def create_cfg(self, file_path):
+		'''Creates an example config file'''
+		config = ConfigParser.RawConfigParser()
+		cat = 'sprite-packer'
+		config.add_section(cat)
+		config.set(cat, 'input', 'sprites/*.png')
+		config.set(cat, 'output-sprite', 'sprite.png')
+		config.set(cat, 'output-plist', 'sprite.plist')
+		config.set(cat, 'width', '1024')
+		config.set(cat, 'height', '1024')
+		config.set(cat, 'aglorithm', 'simple')	
+
+		with open(file_path, 'wb') as configfile:
+			config.write(configfile)
 
 	def error_msg(self):
 		return self.error
@@ -116,23 +158,88 @@ class Packer(object):
 		"""Calls Sprite() and checks all that it can throw"""
 		try:
 			sprite = Sprite(file_path)				
+			sprite.scale = self.settings['scale']
+			sprite.source_pixels_to_points = self.settings['source-pixels-to-points']
 		except IOError:
 			self.error = "Could not open file '{0}'".format(file_path)
 			return None	
 		else:
 			return sprite
 
-	def save_files(self, sprites):
+	def save_sprite(self, sprites):
 		im = Image.new("RGBA", self.settings['size'])
 			
 		for sprite in sprites:
 			if sprite.position[0] != -1:
+				spr = sprite.image
+
 				if sprite.rotated:
-					im.paste(sprite.image.rotate(90), sprite.position)
-				else:
-					im.paste(sprite.image, sprite.position)
+					spr = spr.rotate(-90)
+				if sprite.scale != 1.0:
+					spr = spr.resize(sprite.size, Image.ANTIALIAS)	
+
+				im.paste(spr, sprite.position)
 		
 		im.save(self.settings['output_path'])
+
+		return True
+
+	def save_plist(self, sprites, file_path):
+		'''Saves a plist file that can be used by cocos2d'''
+		
+		texformat = 2
+		frames = {}
+		for sprite in sprites:
+			if texformat == 0:
+				# Format 0
+				# (rotation not supported)
+				frames[sprite.name] = {
+					'width': sprite.point_size[0],
+					'height': sprite.point_size[1],
+					'offsetX': 0,
+					'offsetY': 0,	
+					'originalWidth': sprite.size[0],
+					'originalHeight': sprite.size[1],
+					'x': sprite.position[0],
+					'y': sprite.position[1],
+				}
+			elif 1 <= texformat <= 2:
+				# Format 2
+				frames[sprite.name] = {
+					'frame': plist_encode( (sprite.position, sprite.unrotated_size) ),
+					'offset': plist_encode( (0, 0) ),
+					'sourceColorRect': plist_encode( ((0, 0), sprite.unrotated_size) ),
+					'sourceSize': plist_encode(sprite.unrotated_size),
+				}
+				if texformat == 2:
+					frames[sprite.name]['rotated'] = sprite.rotated
+			elif texformat == 3:
+				# Format 3
+				frames[sprite.name] = {
+					'spriteSize': plist_encode(sprite.unrotated_size),
+					'spriteOffset': plist_encode(sprite.position),
+					'spriteSourceSize': plist_encode(sprite.unrotated_size),
+					'textureRect': plist_encode((sprite.position, sprite.unrotated_size)),
+					'textureRotated': sprite.rotated,
+				}
+
+
+		metadata = {}
+		metadata['format'] = texformat
+		#metadata['realTextureFileName'] = basename(file_path)
+		metadata['size'] = plist_encode(self.settings['size'])
+		metadata['textureFileName'] = basename(basename(self.settings['output_path']))
+
+		texture = {'height': self.settings['size'][0], 'width': self.settings['size'][1]}
+		
+
+		pl = {'frames': frames, 'metadata': metadata, 'texture': texture}
+			
+		try:
+			plistlib.writePlist(pl, file_path)
+		except TypeError, e:
+			self.error = e
+			return False
 
 		return True
 
@@ -179,13 +286,13 @@ class Packer(object):
 
 		yield MESSAGE, "Saving sprite '{0}'".format(self.settings['output_path'])
 
-		if not self.save_files(sprites):
+		if not self.save_sprite(sprites):
 			yield ERROR, "SAVE ERROR: {0}".format(self.error_msg())
 			return
 
 		yield MESSAGE, "Saving plist file '{0}'".format(self.settings['plist_path'])
 
-		if not self.save_plist(sprites):
+		if not self.save_plist(sprites, self.settings['plist_path']):
 			yield ERROR, "PLIST ERROR: {0}".format(self.error_msg())
 			return 
 

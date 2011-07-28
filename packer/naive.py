@@ -31,7 +31,7 @@ class Naive(Algorithm):
 				# Notice that i is not added!
 			else:
 				sprite.position = (x+pad, y+pad)	
-				cur_max_y = max(cur_max_y, y + sprite.height)
+				cur_max_y = max(cur_max_y, y + sprite.height + 2*pad)
 				x += sprite.width + pad*2
 				i += 1
 
