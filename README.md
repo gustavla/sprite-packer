@@ -39,6 +39,7 @@ Your sprite and plist will be generated.
  * You can let the shell be '/bin/sh'.
  * Enter the following:
 
+
     exec sprite-packer path/to/config.cfg
 
 I had some problems with this though, because it seems that Xcode loads its PATH from a different place. You could either fix this somehow or be lazy like me and just use absolutes to find the right stuff (I also had to add 'exec /path/to/python' to get it to run my macports python). 
