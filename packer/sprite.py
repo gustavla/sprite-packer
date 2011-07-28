@@ -40,11 +40,6 @@ class Sprite(object):
 	def size(self):
 		s = (int(round(self.source_size[0]*self.scale)), int(round(self.source_size[1]*self.scale)))
 		return s
-		#js = self.unrotated_size
-		#if self.rotated:
-		#	return tuple(s[::-1])
-		#else:
-		#	return s
 
 	@property
 	def width(self):

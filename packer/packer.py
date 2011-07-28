@@ -18,6 +18,9 @@ import simple
 ERROR = 0
 MESSAGE = 1
 
+VERSION = (0, 1, 0)
+RELEASE = False # This will add a 'git' to the version name, indicated it's not an actual release
+
 def plist_encode(value):
 	if isinstance(value, tuple) or isinstance(value, tuple):
 		# Notice, a double {{ escapes it, so this is essentially "{%s}" using old syntax
@@ -30,10 +33,20 @@ def plist_encode(value):
 class Packer(object):
 	def __init__(self, config_file_path):
 		self.config_file_path = config_file_path
+		self.config_directory = dirname(config_file_path)
 		self.settings = {}
-		self.error = ""
+		self.error = None 
 		pass	
 
+	@classmethod
+	def version_str(cls):
+		'''This is the version for the whole sprite-packer. Possibly awkward place.'''
+		global VERSION
+		global RELEASE	
+		rel_str = ""
+		if not RELEASE:
+			rel_str = "git"
+		return ".".join(["{0:d}".format(x) for x in VERSION]) + rel_str
 
 	def load_settings(self, config_file_path = None):
 		"""Loads the config file"""
@@ -42,31 +55,29 @@ class Packer(object):
 
 		parser = ConfigParser.ConfigParser()
 		try:
-			config_file = open(self.config_file_path)	
+			parser.read(self.config_file_path)
 		except IOError:
 			self.error = "Could not open config file {0}".format(self.config_file_path)
 			return False
-		else:
-			parser.readfp(config_file)
 
-
-
-		cat = "sprite-packer"
+		cat = "settings"
 
 		items = []	
 
 		try:
 			items = dict(parser.items(cat))
 		except ConfigParser.NoSectionError, e:
-			self.error = e 
+			self.error = str(e) 
+			return False
+		except ValueError, e:
+			self.error = str(e)
 			return False
 
 		required = ['input', 'output-sprite', 'output-plist', 'width', 'height', 'padding', 'algorithm']
 
-		print items
 		for r in required:
 			if r not in items:
-				self.error = "Options '{0}' required".format(r)
+				self.error = "Option '{0}' required".format(r)
 				return False
 
 		self.settings['input_path'] = items["input"]
@@ -105,7 +116,7 @@ class Packer(object):
 	def create_cfg(self, file_path):
 		'''Creates an example config file'''
 		config = ConfigParser.RawConfigParser()
-		cat = 'sprite-packer'
+		cat = 'settings'
 		config.add_section(cat)
 		config.set(cat, 'input', 'sprites/*.png')
 		config.set(cat, 'output-sprite', 'sprite.png')
@@ -146,9 +157,10 @@ class Packer(object):
 
 		files = []
 		try:
-			for f in os.listdir(directory):
+			dire = os.path.join(self.config_directory, directory)
+			for f in os.listdir(dire):
 				if fnmatch.fnmatch(f, pattern):
-					files.append(join(directory, f)) 
+					files.append(os.path.join(dire, f)) 
 		except OSError, e:
 			self.error = "No such directory '{0}'".format(directory)	
 
@@ -180,7 +192,7 @@ class Packer(object):
 
 				im.paste(spr, sprite.position)
 		
-		im.save(self.settings['output_path'])
+		im.save(os.path.join(self.config_directory, self.settings['output_path']))
 
 		return True
 
@@ -236,7 +248,7 @@ class Packer(object):
 		pl = {'frames': frames, 'metadata': metadata, 'texture': texture}
 			
 		try:
-			plistlib.writePlist(pl, file_path)
+			plistlib.writePlist(pl, os.path.join(self.config_directory, file_path))
 		except TypeError, e:
 			self.error = e
 			return False

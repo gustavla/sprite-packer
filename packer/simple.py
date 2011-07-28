@@ -16,7 +16,6 @@ class Simple(Algorithm):
 		i = 0
 		while i < c:
 			sprite = sprites[i]
-			print i, x, y
 
 			if sprite.height > sprite.width:
 				sprite.rotated = True
