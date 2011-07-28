@@ -31,6 +31,18 @@ Your sprite and plist will be generated.
  * Python 2 (2.5 or newer)
  * [PIL](http://www.pythonware.com/products/pil/)
 
-## Copyright
+## Xcode integration
 
-Copyright (c)
+ * In Xcode 4, click your project target and select the 'Build Phases'.
+ * Click 'Add Build Phase'.
+ * Move this up above 'Compile Sources' and below 'Target Dependencies'.
+ * You can let the shell be '/bin/sh'.
+ * Enter the following:
+
+    exec sprite-packer path/to/config.cfg
+
+I had some problems with this though, because it seems that Xcode loads its PATH from a different place. You could either fix this somehow or be lazy like me and just use absolutes to find the right stuff (I also had to add 'exec /path/to/python' to get it to run my macports python). 
+
+The config path is relative to your projects top-most folder (the one that houses the .xcodeproj folder). To double check where this is, add this to the shell script: 
+
+    echo $PWD
