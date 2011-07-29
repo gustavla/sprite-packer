@@ -14,7 +14,7 @@ setup(name='sprite-packer',
     description="Texture Packer for use with cocos2d",
     install_requires=['PIL'],
 #    long_description="Tool for evaluating and analysing eye movement classification algorithms."
-    packages=['packer'],
+    packages=['packer', 'packer.algorithms'],
     scripts=['scripts/sprite-packer'],
     classifiers=[
         'Development Status :: 3 - Alpha',
