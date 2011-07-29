@@ -9,11 +9,11 @@ import plistlib
 
 # Project
 from sprite import Sprite
-from algorithm import ALGORITHMS
+from algorithms.algorithm import ALGORITHMS
 
 # Import all algorithm files here, so that they are registered
-import naive
-import simple
+import algorithms.naive
+import algorithms.simple
 
 ERROR = 0
 MESSAGE = 1
