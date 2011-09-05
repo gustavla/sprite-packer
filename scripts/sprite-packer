@@ -5,7 +5,7 @@ def rel(x):
 	return os.path.join(os.path.abspath(os.path.dirname(__file__)), x)
 
 # This is just temporary
-sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), ".."))
+sys.path = [os.path.join(os.path.abspath(os.path.dirname(__file__)), "..")] + sys.path
 
 from packer.shell import main
 

@@ -11,15 +11,20 @@ class Simple(Algorithm):
         cur_max_y = 0
         
         pad = settings['padding']
+
+        for sprite in sprites:
+            if sprite.height > sprite.width:
+                sprite.rotated = True
+                # Now, sprite.height/width will be flipped
+
+
+        # Sort the sprites
+        sprites_sorted = sorted(sprites, cmp=lambda x, y: cmp(x.height, y.height))
     
         c = len(sprites)    
         i = 0
         while i < c:
-            sprite = sprites[i]
-
-            if sprite.height > sprite.width:
-                sprite.rotated = True
-                # Now, sprite.height/width will be flipped
+            sprite = sprites_sorted[i]
 
             #x += sprite.width + settings['padding'] 
             if y + sprite.height + pad*2 > size[1]:
