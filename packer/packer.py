@@ -123,7 +123,8 @@ class Packer(object):
         config.set(cat, 'output-plist', 'sprite.plist')
         config.set(cat, 'width', '1024')
         config.set(cat, 'height', '1024')
-        config.set(cat, 'aglorithm', 'simple')  
+        config.set(cat, 'algorithm', 'simple')
+        config.set(cat, 'padding', '0')
 
         with open(file_path, 'wb') as configfile:
             config.write(configfile)
